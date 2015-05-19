@@ -35,7 +35,11 @@
 #                   Koen Van Impe (@cudeso)
 #
 ###################################################################################################
-
+#
+# 05/18/15 - Palo Alto Networks AutoFocus output format added by Christopher Clark 
+#            cclark@paloaltonetworks.com - https://github.com/Xen0ph0n/
+#
+###################################################################################################
 import os
 import sys
 import fnmatch
@@ -131,7 +135,7 @@ class IOC_Parser(object):
     def parse_page(self, fpath, data, page_num):
         for ind_type, ind_regex in self.patterns.items():
             matches = ind_regex.findall(data)
-
+            
             for ind_match in matches:
                 if isinstance(ind_match, tuple):
                     ind_match = ind_match[0]

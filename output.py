@@ -3,7 +3,7 @@ import sys
 import csv
 import json
 
-OUTPUT_FORMATS = ('csv', 'json', 'yara', )
+OUTPUT_FORMATS = ('csv', 'json', 'yara', 'autofocus')
 
 def getHandler(output_format):
     output_format = output_format.lower()
@@ -17,7 +17,7 @@ def getHandler(output_format):
     return handler_class()
 
 class OutputHandler(object):
-    def print_match(self, fpath, page, name, match):
+    def print_match(self, fpath, page, name, match, last = False):
         pass
 
     def print_header(self, fpath):
@@ -33,14 +33,14 @@ class OutputHandler_csv(OutputHandler):
     def __init__(self):
         self.csv_writer = csv.writer(sys.stdout, delimiter = '\t')
 
-    def print_match(self, fpath, page, name, match):
+    def print_match(self, fpath, page, name, match, last = False):
         self.csv_writer.writerow((fpath, page, name, match))
 
     def print_error(self, fpath, exception):
         self.csv_writer.writerow((fpath, '0', 'error', exception))
 
 class OutputHandler_json(OutputHandler):
-    def print_match(self, fpath, page, name, match):
+    def print_match(self, fpath, page, name, match, last = False):
         data = {
             'path' : fpath,
             'file' : os.path.basename(fpath),
@@ -65,7 +65,7 @@ class OutputHandler_yara(OutputHandler):
     def __init__(self):
         self.rule_enc = ''.join(chr(c) if chr(c).isupper() or chr(c).islower() or chr(c).isdigit() else '_' for c in range(256))
 
-    def print_match(self, fpath, page, name, match):
+    def print_match(self, fpath, page, name, match, last = False):
         if name in self.cnt:
             self.cnt[name] += 1
         else:
@@ -92,3 +92,49 @@ class OutputHandler_yara(OutputHandler):
         print("\tcondition:")
         print("\t\t" + cond)
         print("}")
+
+class OutputHandler_autofocus(OutputHandler):
+    def __init__(self):
+        self.rule_enc = ''.join(chr(c) if chr(c).isupper() or chr(c).islower() or chr(c).isdigit() else '_' for c in range(256))
+
+    def print_match(self, fpath, page, name, match, last = False):
+        string_value = match.replace('hxxp', 'http').replace('\\', '\\\\')
+
+        if name == "MD5":
+            auto_focus_query = '{"field":"sample.md5","operator":"is","value":\"%s\"},' % (string_value)
+        elif name == "SHA1":
+            auto_focus_query = '{"field":"sample.sha1","operator":"is","value":\"%s\"},' % (string_value)
+        elif name == "SHA256":
+            auto_focus_query = '{"field":"sample.sha256","operator":"is","value":\"%s\"},' % (string_value)
+        elif name == "URL":
+            auto_focus_query = '{"field":"alias.url","operator":"is","value":\"%s\"},' % (string_value)
+        elif name == "Host":
+            auto_focus_query = '{"field":"alias.domain","operator":"is","value":\"%s\"},' % (string_value)
+        elif name == "Registry":
+            auto_focus_query = '{"field":"sample.tasks.registry","operator":"is","value":\"%s\"},' % (string_value)
+        elif name == "Filepath":
+            auto_focus_query = '{"field":"sample.tasks.file","operator":"is","value":\"%s\"},' % (string_value)
+        elif name == "Filename":
+            auto_focus_query = '{"field":"alias.filename","operator":"is","value":\"%s\"},' % (string_value)
+        elif name == "Email":
+            auto_focus_query = '{"field":"alias.email","operator":"is","value":\"%s\"},' % (string_value)
+        elif name == "IP":
+            auto_focus_query = '{"field":"alias.ip_address","operator":"is","value":\"%s\"},' % (string_value)
+        if last == False:
+            print(auto_focus_query) 
+        else:
+            print(auto_focus_query[0:-1])
+
+    def print_header(self, fpath):
+        rule_name = os.path.splitext(os.path.basename(fpath))[0].translate(self.rule_enc)
+
+        print("AutoFocus Search for: %s" % (rule_name))
+        print('{"operator":"Any","children":[')
+
+
+    def print_footer(self, fpath):
+        rule_name = os.path.splitext(os.path.basename(fpath))[0].translate(self.rule_enc)
+        print('{"field":"sample.tag","operator":"is in the list","value":[\"%s\"]}]}' % (rule_name))
+
+
+
