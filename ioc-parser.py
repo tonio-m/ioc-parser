@@ -135,7 +135,7 @@ class IOC_Parser(object):
     def parse_page(self, fpath, data, page_num):
         for ind_type, ind_regex in self.patterns.items():
             matches = ind_regex.findall(data)
-            
+
             for ind_match in matches:
                 if isinstance(ind_match, tuple):
                     ind_match = ind_match[0]
@@ -290,6 +290,7 @@ if __name__ == "__main__":
     argparser.add_argument('-o', dest='OUTPUT_FORMAT', default='csv', help='Output format (csv/json/yara)')
     argparser.add_argument('-d', dest='DEDUP', action='store_true', default=False, help='Deduplicate matches')
     argparser.add_argument('-l', dest='LIB', default='pdfminer', help='PDF parsing library (pypdf2/pdfminer)')
+
     args = argparser.parse_args()
 
     parser = IOC_Parser(args.INI, args.INPUT_FORMAT, args.OUTPUT_FORMAT, args.DEDUP, args.LIB)
