@@ -107,9 +107,9 @@ class OutputHandler_autofocus(OutputHandler):
         elif name == "SHA256":
             auto_focus_query = '{"field":"sample.sha256","operator":"is","value":\"%s\"},' % (string_value)
         elif name == "URL":
-            auto_focus_query = '{"field":"alias.url","operator":"is","value":\"%s\"},' % (string_value)
+            auto_focus_query = '{"field":"sample.tasks.connection","operator":"contains","value":\"%s\"},' % (string_value)
         elif name == "Host":
-            auto_focus_query = '{"field":"alias.domain","operator":"is","value":\"%s\"},' % (string_value)
+            auto_focus_query = '{"field":"sample.tasks.dns","operator":"contains","value":\"%s\"},' % (string_value)
         elif name == "Registry":
             #auto_focus_query = '{"field":"sample.tasks.registry","operator":"is","value":\"%s\"},' % (string_value)
             return
@@ -120,9 +120,10 @@ class OutputHandler_autofocus(OutputHandler):
             #auto_focus_query = '{"field":"alias.filename","operator":"is","value":\"%s\"},' % (string_value)
             return
         elif name == "Email":
-            auto_focus_query = '{"field":"alias.email","operator":"is","value":\"%s\"},' % (string_value)
+            #auto_focus_query = '{"field":"alias.email","operator":"is","value":\"%s\"},' % (string_value)
+            return
         elif name == "IP":
-            auto_focus_query = '{"field":"alias.ip_address","operator":"is","value":\"%s\"},' % (string_value)
+            auto_focus_query = '{"field":"sample.tasks.connection","operator":"contains","value":\"%s\"},' % (string_value)
         elif name == "CVE":
             return
         print(auto_focus_query) 
