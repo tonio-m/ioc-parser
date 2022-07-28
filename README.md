@@ -1,6 +1,12 @@
 # ioc-parser
 IOC Parser is a tool to extract indicators of compromise from security reports in PDF format. A good collection of APT related reports with many IOCs can be found here: [APTNotes](https://github.com/kbandla/APTnotes).
 
+## Setup
+```bash
+pip install -r requirements.txt
+python ioc-parser.py sample.pdf
+```
+
 ## Usage
 **ioc-parser.py [-h] [-p INI] [-i FORMAT] [-o FORMAT] [-d] [-l LIB] FILE**
 * *FILE* File/directory path to report(s)
