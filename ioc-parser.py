@@ -36,7 +36,7 @@
 #
 ###################################################################################################
 #
-# 05/18/15 - Palo Alto Networks AutoFocus output format added by Christopher Clark 
+# 05/18/15 - Palo Alto Networks AutoFocus output format added by Christopher Clark
 #            cclark@paloaltonetworks.com - https://github.com/Xen0ph0n/
 #
 ###################################################################################################
@@ -45,7 +45,8 @@ import sys
 import fnmatch
 import argparse
 import re
-from StringIO import StringIO
+from io import StringIO
+
 try:
     import configparser as ConfigParser
 except ImportError:
@@ -55,7 +56,8 @@ except ImportError:
 IMPORTS = []
 try:
     from PyPDF2 import PdfFileReader
-    IMPORTS.append('pypdf2')
+
+    IMPORTS.append("pypdf2")
 except ImportError:
     pass
 try:
@@ -64,17 +66,20 @@ try:
     from pdfminer.converter import TextConverter
     from pdfminer.pdfinterp import PDFPageInterpreter
     from pdfminer.layout import LAParams
-    IMPORTS.append('pdfminer')
+
+    IMPORTS.append("pdfminer")
 except ImportError:
     pass
 try:
     from bs4 import BeautifulSoup
-    IMPORTS.append('beautifulsoup')
+
+    IMPORTS.append("beautifulsoup")
 except ImportError:
     pass
 try:
     import requests
-    IMPORTS.append('requests')
+
+    IMPORTS.append("requests")
 except ImportError:
     pass
 
@@ -82,10 +87,18 @@ except ImportError:
 import output
 from whitelist import WhiteList
 
+
 class IOC_Parser(object):
     patterns = {}
 
-    def __init__(self, patterns_ini, input_format = 'pdf', output_format='csv', dedup=False, library='pypdf2'):
+    def __init__(
+        self,
+        patterns_ini,
+        input_format="pdf",
+        output_format="csv",
+        dedup=False,
+        library="pypdf2",
+    ):
         basedir = os.path.dirname(os.path.abspath(__file__))
         self.load_patterns(patterns_ini)
         self.whitelist = WhiteList(basedir)
@@ -97,27 +110,27 @@ class IOC_Parser(object):
         try:
             self.parser_func = getattr(self, parser_format)
         except AttributeError:
-            e = 'Selected parser format is not supported: %s' % (input_format)
+            e = "Selected parser format is not supported: %s" % (input_format)
             raise NotImplementedError(e)
 
         self.library = library
-        if input_format == 'pdf':
+        if input_format == "pdf":
             if library not in IMPORTS:
-                e = 'Selected PDF parser library not found: %s' % (library)
+                e = "Selected PDF parser library not found: %s" % (library)
                 raise ImportError(e)
-        elif input_format == 'html':
-            if 'beautifulsoup' not in IMPORTS:
-                e = 'HTML parser library not found: BeautifulSoup'
+        elif input_format == "html":
+            if "beautifulsoup" not in IMPORTS:
+                e = "HTML parser library not found: BeautifulSoup"
                 raise ImportError(e)
 
     def load_patterns(self, fpath):
         config = ConfigParser.ConfigParser()
         with open(fpath) as f:
-            config.readfp(f)
+            config.read_file(f)
 
         for ind_type in config.sections():
             try:
-                ind_pattern = config.get(ind_type, 'pattern')
+                ind_pattern = config.get(ind_type, "pattern")
             except:
                 continue
 
@@ -133,7 +146,7 @@ class IOC_Parser(object):
         return False
 
     def parse_page(self, fpath, data, page_num):
-        for ind_type, ind_regex in self.patterns.items():
+        for ind_type, ind_regex in list(self.patterns.items()):
             matches = ind_regex.findall(data)
 
             for ind_match in matches:
@@ -153,7 +166,7 @@ class IOC_Parser(object):
 
     def parse_pdf_pypdf2(self, f, fpath):
         try:
-            pdf = PdfFileReader(f, strict = False)
+            pdf = PdfFileReader(f, strict=False)
 
             if self.dedup:
                 self.dedup_store = set()
@@ -175,7 +188,7 @@ class IOC_Parser(object):
     def parse_pdf_pdfminer(self, f, fpath):
         try:
             laparams = LAParams()
-            laparams.all_texts = True  
+            laparams.all_texts = True
             rsrcmgr = PDFResourceManager()
             pagenos = set()
 
@@ -206,9 +219,9 @@ class IOC_Parser(object):
         try:
             self.parser_func = getattr(self, parser_format)
         except AttributeError:
-            e = 'Selected PDF parser library is not supported: %s' % (self.library)
+            e = "Selected PDF parser library is not supported: %s" % (self.library)
             raise NotImplementedError(e)
-            
+
         self.parser_func(f, fpath)
 
     def parse_txt(self, f, fpath):
@@ -229,19 +242,25 @@ class IOC_Parser(object):
         try:
             if self.dedup:
                 self.dedup_store = set()
-                
+
             data = f.read()
             soup = BeautifulSoup(data)
             html = soup.findAll(text=True)
 
-            text = u''
+            text = ""
             for elem in html:
-                if elem.parent.name in ['style', 'script', '[document]', 'head', 'title']:
+                if elem.parent.name in [
+                    "style",
+                    "script",
+                    "[document]",
+                    "head",
+                    "title",
+                ]:
                     continue
-                elif re.match('<!--.*-->', unicode(elem)):
+                elif re.match("<!--.*-->", str(elem)):
                     continue
                 else:
-                    text += unicode(elem)
+                    text += str(elem)
 
             self.handler.print_header(fpath)
             self.parse_page(fpath, text, 1)
@@ -253,45 +272,72 @@ class IOC_Parser(object):
 
     def parse(self, path):
         try:
-            if path.startswith('http://') or path.startswith('https://'):
-                if 'requests' not in IMPORTS:
-                    e = 'HTTP library not found: requests'
+            if path.startswith("http://") or path.startswith("https://"):
+                if "requests" not in IMPORTS:
+                    e = "HTTP library not found: requests"
                     raise ImportError(e)
-                headers = { 'User-Agent': 'Mozilla/5.0 Gecko Firefox' }
+                headers = {"User-Agent": "Mozilla/5.0 Gecko Firefox"}
                 r = requests.get(path, headers=headers)
                 r.raise_for_status()
                 f = StringIO(r.content)
                 self.parser_func(f, path)
                 return
             elif os.path.isfile(path):
-                with open(path, 'rb') as f:
+                with open(path, "rb") as f:
                     self.parser_func(f, path)
                 return
             elif os.path.isdir(path):
                 for walk_root, walk_dirs, walk_files in os.walk(path):
                     for walk_file in fnmatch.filter(walk_files, self.ext_filter):
                         fpath = os.path.join(walk_root, walk_file)
-                        with open(fpath, 'rb') as f:
+                        with open(fpath, "rb") as f:
                             self.parser_func(f, fpath)
                 return
 
-            e = 'File path is not a file, directory or URL: %s' % (path)
+            e = "File path is not a file, directory or URL: %s" % (path)
             raise IOError(e)
         except (KeyboardInterrupt, SystemExit):
             raise
         except Exception as e:
             self.handler.print_error(path, e)
 
+
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('PATH', action='store', help='File/directory/URL to report(s)')
-    argparser.add_argument('-p', dest='INI', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'patterns.ini'), help='Pattern file')
-    argparser.add_argument('-i', dest='INPUT_FORMAT', default='pdf', help='Input format (pdf/txt)')
-    argparser.add_argument('-o', dest='OUTPUT_FORMAT', default='csv', help='Output format (csv/json/yara)')
-    argparser.add_argument('-d', dest='DEDUP', action='store_true', default=False, help='Deduplicate matches')
-    argparser.add_argument('-l', dest='LIB', default='pdfminer', help='PDF parsing library (pypdf2/pdfminer)')
+    argparser.add_argument(
+        "PATH", action="store", help="File/directory/URL to report(s)"
+    )
+    argparser.add_argument(
+        "-p",
+        dest="INI",
+        default=os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "patterns.ini"
+        ),
+        help="Pattern file",
+    )
+    argparser.add_argument(
+        "-i", dest="INPUT_FORMAT", default="pdf", help="Input format (pdf/txt)"
+    )
+    argparser.add_argument(
+        "-o", dest="OUTPUT_FORMAT", default="csv", help="Output format (csv/json/yara)"
+    )
+    argparser.add_argument(
+        "-d",
+        dest="DEDUP",
+        action="store_true",
+        default=False,
+        help="Deduplicate matches",
+    )
+    argparser.add_argument(
+        "-l",
+        dest="LIB",
+        default="pdfminer",
+        help="PDF parsing library (pypdf2/pdfminer)",
+    )
 
     args = argparser.parse_args()
 
-    parser = IOC_Parser(args.INI, args.INPUT_FORMAT, args.OUTPUT_FORMAT, args.DEDUP, args.LIB)
+    parser = IOC_Parser(
+        args.INI, args.INPUT_FORMAT, args.OUTPUT_FORMAT, args.DEDUP, args.LIB
+    )
     parser.parse(args.PATH)
